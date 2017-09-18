@@ -1,0 +1,53 @@
+{
+  "name": "my-app",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "ng": "ng",
+    "serve": "ng serve",
+    "build": "ng build",
+    "test": "jest --watch",
+    "test:ci": "jest --runInBand",
+    "test:cleanup": "jest --no-cache",
+    "lint": "ng lint",
+    "format":
+      "prettier --semi --single-quote --trailing-comma all --parser typescript --write '**/*.{ts,css}'"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^4.2.4",
+    "@angular/common": "^4.2.4",
+    "@angular/compiler": "^4.2.4",
+    "@angular/core": "^4.2.4",
+    "@angular/forms": "^4.2.4",
+    "@angular/http": "^4.2.4",
+    "@angular/platform-browser": "^4.2.4",
+    "@angular/platform-browser-dynamic": "^4.2.4",
+    "@angular/router": "^4.2.4",
+    "core-js": "^2.4.1",
+    "rxjs": "^5.4.2",
+    "zone.js": "^0.8.14"
+  },
+  "devDependencies": {
+    "@angular/cli": "1.3.2",
+    "@angular/compiler-cli": "^4.2.4",
+    "@angular/language-service": "^4.2.4",
+    "@types/jest": "^20.0.8",
+    "@types/node": "^8.0.27",
+    "codelyzer": "^3.1.2",
+    "jest": "^21.0.1",
+    "jest-preset-angular": "^3.0.1",
+    "prettier": "^1.6.1",
+    "ts-node": "^3.3.0",
+    "tslint": "^5.7.0",
+    "tslint-config-prettier": "^1.5.0",
+    "typescript": "^2.5.2"
+  },
+  "jest": {
+    "verbose": true,
+    "preset": "jest-preset-angular",
+    "coverageReporters": ["json", "lcov", "text", "html"],
+    "setupTestFrameworkScriptFile": "<rootDir>/src/setupJest.ts",
+    "transformIgnorePatterns": ["node_modules/(?!@ngrx|ngx-http-test)"]
+  }
+}
