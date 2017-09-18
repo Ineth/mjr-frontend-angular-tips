@@ -62,6 +62,20 @@ Rangle's Angular Training Book
 
 ### https://www.gitbook.com/book/rangle-io/ngcourse2
 
+----
+
+## It’s angular
+
+AngularJS is 1.x
+Angular is 2+ (so also 4, 5, 6)
+
+Angular 4,x has Long Term Support (LTS) until October 2018
+Angular 5 will be released in 18 Sept 2017
+Angular 6 - March 2018
+Angular 7 - October 2018
+
+[angular/RELEASE_SCHEDULE.md at master · angular/angular · GitHub](https://github.com/angular/angular/blob/master/docs/RELEASE_SCHEDULE.md)
+
 ---
 
 # Tooling
@@ -262,10 +276,48 @@ npx webpack-bundle-analyzer dist/stats.json
 
 <img src="./images/bundle-size.gif"></img>
 
+----
+
+## Direct Access to CSS during serve
+
+```bash
+ng serve --extract-css
+```
+
+
 ---
 
 # Typescript
 > I can do more then you think
+
+----
+
+## Global variables
+
+```js
+// Extra variables that live on Global that
+// will be replaced by webpack DefinePlugin
+declare var ENV: string;
+declare var HMR: boolean;
+
+// Any global declarations
+declare var $: any;
+
+// support NodeJS modules without type definitions
+declare module 'my-awesome-lib';
+declare module '*';
+
+interface ErrorStackTraceLimit {
+  stackTraceLimit: number;
+}
+
+interface GlobalEnvironment {
+  ENV: string;
+  HMR: boolean;
+}
+
+interface Global extends GlobalEnvironment  {}
+```
 
 ----
 
@@ -569,44 +621,6 @@ Better
 <user-details *ngFor="let user of users" [user]="user"></user-details>
 ```
 
-----
-
-## Base component classes
-
-To share common functionality
-
-```js
-export abstract class AbstractBaseComponent {
-    rights: Rights;
-
-    constructor(private authService: AuthService) {}
-
-    isAuthenticated(): boolean {
-        ...
-    }
-
-    hasAccessTo(permission: string, accessRights: Rights) {
-        ...
-    }
-}
-```
-
-```ts
-@Component({
-  selector: 'my-component',
-  template: `
-    <div *ngIf="isAuthenticated()"
-        ...
-        <button *ngIf="hasAccessTo('account', rights.delete)">
-            Delete Account
-        </button>
-    </div>
-  `
-})
-export class MyComponent extends AbstractBaseComponent {
-}
-```
-
 ---
 
 # Debugging
@@ -670,6 +684,64 @@ Start chrome via VSCode
 
 ----
 
+## RxJS operators
+
+The problem
+
+<img src="./images/map-error.png" width="800px">
+
+Don’t do this
+
+```js
+import {Observable} from 'rxjs';
+```
+
+Do this
+
+```js
+import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/catch';
+```
+
+----
+
+## RxJS operators helper
+
+src/app/shared/rxjs-operators.ts
+
+```js
+// Observable class extensions
+import 'rxjs/add/observable/of';
+
+// Observable operators
+import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/do';
+import 'rxjs/add/operator/catch';
+import 'rxjs/add/operator/switchMap';
+import 'rxjs/add/operator/mergeMap';
+import 'rxjs/add/operator/filter';
+import 'rxjs/add/operator/debounceTime';
+import 'rxjs/add/operator/distinctUntilChanged';
+```
+
+app.module.ts
+
+```js
+import './rxjs-operators';
+
+@NgModule({
+  ...
+})
+```
+
+test.setup.ts
+
+```js
+import './rxjs-operators';
+```
+
+----
+
 ## Debug RxJS
 
 ```js
@@ -710,33 +782,209 @@ this.myService.findById(objectId)
 
 ## A simple cache
 
-```js
-export class CountryService {
-
-  constructor(private http: Http) {}
-
-  private countries: Observable<Country[]> = this.http.get('/api/countries')
-    .map(res => res.json())
-    .publishReplay(1, 30000) // this tells Rx to cache the latest emitted value
-    .refCount(); // and this tells Rx to keep the Observable alive as long as there are any Subscribers
-
-  public getCountries(): Observable<Country[]> {
-    return this.countries;
-  }
-}
-
-```
-
-----
-
-## Other cache example
-
 ```ts
 getUsers() {
+    if (this.localCache) {
+        return Observable.of(this.localCache)
+    }
     return this.http.get('/api/users')
         .map(res => res.json())
         .startWith(this.localCache)
         .do(data => this.localCache = data)
+}
+```
+
+----
+
+## Better cache example
+
+```js
+export class FriendsService {
+    friends: Observable<IFriend[]> = null;
+    constructor(private http: Http) {}
+
+    getFriends() : Observable<IFriend[]> {
+        if(!this.friends){
+            this.friends = this.http.get('./api/friends')
+               .map(res => res.json().friends)
+               .publishReplay(1, 30000)
+               .refCount();
+        }
+        return this.friends;
+    }
+    clearCache(){
+        this.friends = null;
+    }
+}
+```
+
+in RxJS 5.4
+
+```js
+this.friends = this.http.get('./api/friends')
+               .map(res => res.json().friends)
+               .shareReplay(1);
+```
+----
+
+## Http Retry & Timeout
+
+A basic retry with timeout
+
+```js
+getUsers(): Observable<User[]> {
+  return this.http.get('api/users')
+      .retry(3)
+      .timeout(2000, new Error('timeout exceeded'))
+      .map(res => res.map())
+}
+```
+
+----
+
+## Improve Retry and timeout
+
+A more full complete retry
+
+```js
+http.get('api/users')
+    .map(res => res.json())
+    .let(handleRetryAndTimeout(2, 500, 2000))
+    .catch(error => castError(error))
+
+function handleRetryAndTimeout(retry, retryTime, timeout) {
+    return (obs) => {
+      return obs.timeout(timeout)
+        .retryWhen(errors => {
+          return errors
+            .scan((retryCount, err) => {
+              // only retry on socket error, not on http error
+              if (!err.status && retryCount < retry) {
+                return retryCount + 1;
+              }
+              throw err;
+            }, 0)
+            .delay(retryTime);
+        })
+        .catch(castError);
+    }
+}
+```
+
+----
+
+## Unsubscribe
+
+Forms
+
+```js
+export class TestComponent {
+
+  ngOnInit() {
+    this.form = new FormGroup({...});
+    this.valueChanges  = this.form.valueChanges.subscribe(console.log);
+    this.statusChanges = this.form.statusChanges.subscribe(console.log);
+  }
+
+  ngOnDestroy() {
+    this.valueChanges.unsubscribe();
+    this.statusChanges.unsubscribe();
+  }
+}
+```
+
+Router
+
+```js
+export class TestComponent {
+  constructor(private route: ActivatedRoute, private router: Router) { }
+
+  ngOnInit() {
+    this.route.params.subscribe(console.log);
+    this.route.queryParams.subscribe(console.log);
+    this.route.fragment.subscribe(console.log);
+    this.route.data.subscribe(console.log);
+    this.route.url.subscribe(console.log);
+
+    this.router.events.subscribe(console.log);
+  }
+
+  ngOnDestroy() {
+    // You should unsubscribe from each observable here
+  }
+}
+```
+
+----
+
+## Unsubscribe
+
+infinite streams
+
+```js
+export class TestComponent {
+
+  constructor(private element : ElementRef) { }
+
+  interval: Subscription;
+  click: Subscription;
+
+  ngOnInit() {
+    this.interval = Observable.interval(1000).subscribe(console.log);
+    this.click = Observable.fromEvent(this.element.nativeElement, 'click').subscribe(console.log);
+  }
+
+  ngOnDestroy() {
+    this.interval.unsubscribe();
+    this.click.unsubscribe();
+  }
+
+}
+```
+
+Redux store
+
+```js
+export class TestComponent {
+
+  constructor(private store: Store) { }
+  todos: Subscription;
+
+  ngOnInit() {
+     this.todos = this.store.select('todos').subscribe(console.log);
+  }
+
+  ngOnDestroy() {
+    this.todos.unsubscribe();
+  }
+}
+```
+
+----
+
+## Unsubscribe
+
+Auto destroy
+
+```js
+export class TestComponent {
+
+  constructor(private store: Store) { }
+  private componetDestroyed: Subject = new Subject();
+  ngOnInit() {
+     this.store.select('todos')
+         .takeUntil(this.componetDestroyed)
+         .subscribe(console.log);
+
+     this.store.select('posts')
+         .takeUntil(this.componetDestroyed)
+         .subscribe(console.log);
+  }
+
+  ngOnDestroy() {
+    this.componetDestroyed.next();
+    this.componetDestroyed.unsubscribe();
+  }
 }
 ```
 
@@ -781,10 +1029,6 @@ See also: [Exploring the Various Decorators in Angular](Exploring the Various De
 
 ----
 
-## Jest
-
-----
-
 ## PhantomJS vs Chrome
 
 PhantomJS is a slow, outdated browser. Don't use it anymore.
@@ -808,58 +1052,131 @@ module.exports = function(config) {
 
 ----
 
-## Fast unit testing without testbed
+## Jest
 
-TODO - Avoid testBed
+> Don't use Karma/Jasmine
 
-[Unit testing Angular applications with Jest](https://izifortune.com/unit-testing-angular-applications-with-jest/)
+Jest is:
+
+* Easier to use
+* Fast (parallel, jsDom)
+* Gives Instant Feedback
+* Has Powerful mocking
+* Has snapshot testing (easy component testing)
 
 ----
 
-## Improved http
+## Fast http testing
 
-A basic retry with timeout
+This is slow :(
 
 ```js
-getUsers(): Observable<User[]> {
-  return this.http.get('api/users')
-      .retry(3)
-      .timeout(2000, new Error('timeout exceeded'))
-      .map(res => res.map())
-}
+beforeEach(() => {
+    TestBed.configureTestingModule({
+        providers: [MyService],
+        imports: [HttpClientTestingModule],
+    });
+})
+
+test('getModels', () => {
+    engine.getModels().subscribe(models => {
+      expect(models.length).toBe(2);
+      expect(models[0]).toEqual('aaaaa');
+    });
+
+    const req = httpMock.expectOne('api/models');
+    expect(req.request.method).toEqual('GET');
+
+    req.flush(['aaaaa', 'bbbbb']);
+});
+
 ```
 
-----
-
-## Improve Retry and timeout
-
-A more full complete retry
+Simple mocking is x10 faster then TestBed testing
 
 ```js
-http.get('api/users')
-    .map(res => res.json())
-    .let(handleRetryAndTimeout(2, 500, 2000))
-    .catch(error => castError(error))
+test('getModels', async(() => {
+    const resource = [{ id: 123, title: 'abc' }, { id: 333, title: 'abc' }];
+    const httpClient = {
+        get: jest.fn().mockImplementation(() => {
+            return Observable.of(resource);
+        }),
+    };
+    const service = new MyService(httpClient as any);
 
-function handleRetryAndTimeout(retry, retryTime, timeout) {
-    return (obs) => {
-      return obs.timeout(timeout)
-        .retryWhen(errors => {
-          return errors
-            .scan((retryCount, err) => {
-              // only retry on socket error, not on http error
-              if (!err.status && retryCount < retry) {
-                return retryCount + 1;
-              }
-              throw err;
-            }, 0)
-            .delay(retryTime);
-        })
-        .catch(castError);
+    expect.assertions(3);
+    service.getModels().subscribe(models => {
+        const url = httpClient.get.mock.calls[0][0];
+        expect(url).toEqual('api/models');
+        expect(models).toBeDefined();
+        expect(models[0].id).toEqual(123);
+    });
+}));
+```
+
+---
+
+# Date Pipe
+
+```html
+<span>{{today | date: 'dd/MM/yyyy'}}</span>
+<span>{{today | date: 'shortDate'}}</span>
+```
+
+Predefined formats
+
+* ‘medium’
+* ‘short’
+* ‘longDate’
+* ‘mediumDate’
+* ‘mediumTime’
+* ‘shortTime’
+
+It's US format, but we can change this
+
+```
+providers: [
+    {
+        provide: LOCALE_ID,
+        useValue: 'en-US'
     }
+]
+```
+
+----
+
+# Date Pipe
+
+Better to create custom date pipe
+
+```js
+@Pipe({
+  name: 'dateFormat'
+})
+export class DateFormatPipe extends DatePipe implements PipeTransform {
+  transform(value: any, args?: any): any {
+    return super.transform(value, 'dd/MMM/yyyy');
+  }
 }
 ```
 
+```html
+<span>{{today | dateFormat}}</span>
+```
+
+Alternative
+
+```js
+@Pipe({
+  name: 'dateFormat'
+})
+export class DateFormatPipe implements PipeTransform {
+  transform(value: any, args?: any): any {
+    const datePipe = new DatePipe('en');
+    return datePipe.transform(value, 'dd/MMM/yyyy');
+  }
+}
+```
 
 ---
 
