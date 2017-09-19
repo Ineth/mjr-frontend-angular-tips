@@ -3,14 +3,29 @@ title: Angular Tips & Tricks
 revealOptions:
     transition: 'fade'
     transition-speed: 'slow'
-    width: 1200
-    height: 1000
+    width: 1024
+    height: 900
     margin: 0.1
     minScale: 0.5
     maxScale: 1.0
+    controls: false
 ---
 
 <style type="text/css">
+.reveal .slides {
+  height: 100%;
+  top: 20px;
+  margin-top: 0;
+}
+
+.reveal .slides>section {
+  min-height: 90%;
+}
+
+.reveal .slides>section>section {
+  min-height: 100%;
+}
+
 .reveal pre code {
     display: block;
     padding: 5px;
@@ -64,13 +79,13 @@ Rangle's Angular Training Book
 
 ----
 
-## It’s angular
+## It’s Angular
 
 AngularJS is 1.x
 Angular is 2+ (so also 4, 5, 6)
 
-Angular 4,x has Long Term Support (LTS) until October 2018
-Angular 5 will be released in 18 Sept 2017
+Angular 4.x has Long Term Support (LTS) until October 2018
+Angular 5 will be released in 23 oct 2017
 Angular 6 - March 2018
 Angular 7 - October 2018
 
@@ -284,6 +299,14 @@ npx webpack-bundle-analyzer dist/stats.json
 ng serve --extract-css
 ```
 
+[http://localhost:4200/styles.bundle.css](http://localhost:4200/styles.bundle.css)
+
+NOTICE: (HMR) does not allow for CSS hot reload when used together with --extract-css
+
+```bash
+# don't do this
+ng serve --extract-css --hmr
+```
 
 ---
 
@@ -371,17 +394,17 @@ Be aware all json is of type: any
 
 ----
 
-## Typesafe http calls
+## Type safe http calls
 
 With interface
 
-```js
+```ts
 interface IUser {
     name: string,
     role: string,
 }
 
-export class ProductService {
+export class UserService {
     constructor(private http: Http) {}
 
     get() : Observable<IUser[]> {
@@ -390,6 +413,10 @@ export class ProductService {
     }
 }
 ```
+
+----
+
+## Type safe http calls
 
 With class
 
@@ -411,18 +438,38 @@ export class UserService {
 }
 ```
 
+Don't
+
+```ts
+getAll() : Observable<User[]> {
+    return this.http.get(`/api/users`)
+        .map(res => res.json())
+}
+```
+
+
 ----
 
-## HttpClientModule
+## HttpClient
 
 - No more res.json()
 - Http interceptors are back
 - Easier unit testing !!!!!
 
 ```js
+import { HttpClient } from '@angular/common/http';
+
+export class User {
+    name: string;
+    role: string;
+    constructor(dto: IUserDTO) {
+        Object.assign(this.dto);
+    }
+}
+
 interface IUserDto {
-    name: string,
-    role: string,
+    name: string;
+    role: string;
 }
 
 export class UserService {
@@ -439,6 +486,8 @@ export class UserService {
 
 ## Access the dom
 
+Don't
+
 ```js
 @Component({ ... })
 export class HeroComponent {
@@ -452,7 +501,7 @@ export class HeroComponent {
 }
 ```
 
-Better
+Do
 
 ```js
 @Component({ ... })
@@ -504,7 +553,7 @@ export class HighlightDirective {
 
 ## Dynamic base ref
 
-When the app is hosted after a reverse proxy
+When the app is hosted after reverse proxy or virtual path
 
 ```
 http://server.com/myApp
@@ -559,18 +608,6 @@ export class AppComponent {
 
 ----
 
-## Template of reactive form
-
-Always go for a Reactive Form
-
-* Unit testable (validation is performed in code)
-* Easier to write custom validator
-* RxJS powered
-
-TODO: add sample
-
-----
-
 ## Don't place logic in your templates
 
 Don't
@@ -605,7 +642,9 @@ hasFieldError(fieldName: string): boolean {
 
 ## Details should go in sub components
 
-Whenever you write an **ngFor** directive on an HTML element with children, consider separating that element into a dependent component, like this:
+Whenever you write an **ngFor**, consider separating that element into a dependent component:
+
+Avoid
 
 ```html
 <div *ngFor="let user of users">
@@ -615,10 +654,287 @@ Whenever you write an **ngFor** directive on an HTML element with children, cons
 </div>
 ```
 
-Better
+Consider
 
 ```html
 <user-details *ngFor="let user of users" [user]="user"></user-details>
+```
+
+----
+
+## Style host element of the component?
+
+Don't
+
+```html
+<!-- sample.component.html -->
+<div class="sample">
+    <h1>My Component</h1>
+</div>
+```
+
+```css
+/* sample.component.css */
+.sample {
+  background: blue;
+}
+```
+
+Do
+
+```html
+<!-- sample.component.html -->
+<h1>My Component</h1>
+```
+
+```css
+/* sample.component.css */
+.root {
+  background: blue;
+}
+```
+
+----
+
+## Date Pipe
+
+Don't
+
+```html
+<span>{{today | date: 'dd/MM/yyyy'}}</span>
+<span>{{today | date: 'shortDate'}}</span>
+```
+
+Predefined formats
+
+* ‘medium’
+* ‘short’
+* ‘longDate’
+* ‘shortTime’
+
+It's US format, but we can change this
+
+```
+providers: [
+    {
+        provide: LOCALE_ID,
+        useValue: 'en-US'
+    }
+]
+```
+
+----
+
+## Date Pipe
+
+Do
+
+```js
+@Pipe({
+  name: 'dateFormat'
+})
+export class DateFormatPipe extends DatePipe implements PipeTransform {
+  transform(value: any, args?: any): any {
+    return super.transform(value, 'dd/MMM/yyyy');
+  }
+}
+```
+
+```html
+<span>{{today | dateFormat}}</span>
+```
+
+Alternative
+
+```js
+@Pipe({
+  name: 'dateFormat'
+})
+export class DateFormatPipe implements PipeTransform {
+  transform(value: any, args?: any): any {
+    const datePipe = new DatePipe('en');
+    return datePipe.transform(value, 'dd/MMM/yyyy');
+  }
+}
+```
+
+----
+
+## Advanced *ngFor
+
+index & count
+
+```html
+<ul>
+  <li *ngFor="let contact of contacts;
+              let i = index; let c = count;">
+    <contact-card
+      [contact]="contact"
+      [collectionLength]="c"
+      (update)="onUpdate($event, i)">
+    </contact-card>
+  </li>
+</ul>
+```
+
+odd & even
+
+```css
+.odd-active { background: purple; color: #fff; }
+.even-active { background: red; color: #fff; }
+```
+
+```html
+<ul>
+    <li *ngFor="let contact of contacts;
+                let o = odd;
+                let e = even;"
+        [ngClass]="{ 'odd-active': o, 'even-active': e}">
+        <contact-card [contact]="contact"></contact-card>
+    </li>
+</ul>
+```
+
+----
+
+## Constructor vs onInit()
+
+* Constructor is for dependency injection
+* OnInit for the rest
+
+```ts
+class ExampleComponent implements OnInit {
+  users$ = this.store.select('users');
+  @Input() person: Person;
+
+  // this is called by the JavaScript engine
+  constructor(
+    private activatedRoute: ActivatedRoute,
+    private store: Store<IAppState>
+  ) {}
+
+  // this is called by Angular once it has finished
+  // setting up the component
+  ngOnInit() {
+    const id = this.activatedRoute.snapshot.params.id
+    console.log(this.person)
+  }
+}
+```
+
+---
+
+# Forms
+> Template of reactive forms, which to choose.
+
+----
+
+## Form Types
+
+Template Based
+
+```html
+<form (ngSubmit)="onSubmit()">
+    <input type="text" name="name" [(ngModel)]="model.name"
+           required minlength="4">
+    <input type="text" name="email" [(ngModel)]="model.email">
+    <button type="submit">Submit</button>
+</form>
+```
+
+```js
+export class MyComponent {
+    onSubmit() {
+        console.log('submit', this.model)
+    }
+}
+```
+
+----
+
+## Form Types
+
+Reactive / Model Based
+
+```html
+<form [formGroup]="myForm" (ngSubmit)="onSubmit()" >
+    <input type="text" formControlName="name" >
+    <input type="text" formControlName="email" >
+    <button type="submit">Submit</button>
+</form>
+```
+
+```js
+export class MyComponent extends OnInit {
+    constructor(private fb: FormBuilder) { }
+    ngOnInit() {
+        this.myForm = this.fb.group({
+            email: [this.model.email],
+            name: [
+                this.model.name,
+                Validators.required,
+                Validators.minLength(4)
+            ],
+        })
+    }
+    onSubmit() {
+        console.log('submit', this.userForm.value)
+    }
+}
+```
+
+----
+
+## Which form should I use?
+
+<br>
+<br>
+<br>
+# Reactive Form
+<!-- .element: class="fragment" data-fragment-index="2" -->
+
+----
+
+## Reactive Form
+
+* From simple to complex forms
+* It's testable (validation is performed in code)
+* Custom validator is easy to write
+
+```js
+export const MyValidators = {
+    validEmail(control) {
+        if (isEmail(control.value)) {
+            return null;   // valid
+        }
+        return { 'validEmail': 'Email is invalid ' }
+    }
+}
+```
+
+----
+
+## Reactive Form - RxJS powered
+
+Form changes
+
+```js
+// save form content
+this.myForm.valueChanges
+    .subscribe(form => {
+        sessionStorage.setItem('form', JSON.stringify(form));
+    });
+```
+
+Control changes
+
+```js
+// auto complete
+this.searchControl.valueChanges
+    .debounceTime(400)
+    .distinctUntilChanged()
+    .switchMap(term => this.wikipediaService.search(term))
+    .subscribe(items => this.items = items)
 ```
 
 ---
@@ -630,17 +946,25 @@ Better
 
 ## Augury
 
-Augury helps Angular 2.0 developers visualize the application through component trees, and visual debugging tools.
+[Augury](https://augury.angular.io/) helps Angular developers visualize the application through component trees, and visual debugging tools.
+
+<img src="./images/augury.png">
 
 ----
 
 ## Angular Language Service
+
+<img src="./images/angular-language-service.png">
+
+<img src="https://github.com/angular/vscode-ng-language-service/raw/master/client/R67RcGftRS.gif">
 
 ----
 
 ## Source Maps & Debugger
 
 Open web developer console, go to "Sources" section. Press "cntrl+p". A search box will open where type ".ts" and find your file or directly search your file like "myfile.ts".
+
+<img src="./images/debug-file.png">
 
 ----
 
@@ -657,7 +981,7 @@ Create launch config file
             "name": "Launch Chrome against localhost, with sourcemaps",
             "type": "chrome",
             "request": "launch",
-            "url": "http://localhost:3000",
+            "url": "http://localhost:4200",
             "sourceMaps": true,
             "webRoot": "${workspaceRoot}/build"
         },
@@ -674,6 +998,8 @@ Create launch config file
 ```
 
 Installing the Debugger for Chrome vscode extension
+
+<img src="./images/vscode-chrome-debugger.png">
 
 Start chrome via VSCode
 
@@ -742,6 +1068,40 @@ import './rxjs-operators';
 
 ----
 
+## No nested subscribes!
+
+Nested subscribes is a [Code Smell](https://blog.codinghorror.com/code-smells/)
+
+```js
+dialog.open(MyDialog, data)
+    .subscribe(dialogResult => {
+        if (dialogResult.isOk) {
+            const myEntity = new MyEntity(dialogResult.value);
+            this.myService.store(myEntity).subscribe(storedEntity => {
+                this.toaster.pop('Entity Saved', 'success')
+            })
+        }
+    })
+```
+
+Use switchMap
+
+```js
+dialog.open(MyDialog, data)
+    .filter(dialogResult => dialogResult.isOk)
+    .switchMap(dialogResult => {
+        const myEntity = new MyEntity(dialogResult.value);
+        return this.myService.store(myEntity);
+    })
+    .subscribe(storedEntity => {
+        this.toaster.popSuccess('Entity Saved')
+    })
+```
+
+> Also no nested 'then' functions
+
+----
+
 ## Debug RxJS
 
 ```js
@@ -787,10 +1147,9 @@ getUsers() {
     if (this.localCache) {
         return Observable.of(this.localCache)
     }
-    return this.http.get('/api/users')
-        .map(res => res.json())
+    return this.httpClient.get<IUsersDTO>('/api/users')
         .startWith(this.localCache)
-        .do(data => this.localCache = data)
+        .do(users => this.localCache = users)
 }
 ```
 
@@ -798,15 +1157,15 @@ getUsers() {
 
 ## Better cache example
 
-```js
+```ts
 export class FriendsService {
     friends: Observable<IFriend[]> = null;
-    constructor(private http: Http) {}
+    constructor(private httpClient: HttpClient) {}
 
     getFriends() : Observable<IFriend[]> {
         if(!this.friends){
-            this.friends = this.http.get('./api/friends')
-               .map(res => res.json().friends)
+            this.friends = this.httpClient.get<IFriendsDTO>('./api/friends')
+               .map(data => data.friends)
                .publishReplay(1, 30000)
                .refCount();
         }
@@ -820,11 +1179,12 @@ export class FriendsService {
 
 in RxJS 5.4
 
-```js
-this.friends = this.http.get('./api/friends')
-               .map(res => res.json().friends)
-               .shareReplay(1);
+```ts
+this.friends = this.httpClient.get<IFriendsDTO>('./api/friends')
+               .map(data => data.friends)
+               .shareReplay(1, 30000);
 ```
+
 ----
 
 ## Http Retry & Timeout
@@ -832,11 +1192,11 @@ this.friends = this.http.get('./api/friends')
 A basic retry with timeout
 
 ```js
-getUsers(): Observable<User[]> {
-  return this.http.get('api/users')
+getUser(id): Observable<User[]> {
+  return this.httpClient.get(`api/users/${id}`)
       .retry(3)
       .timeout(2000, new Error('timeout exceeded'))
-      .map(res => res.map())
+      .map(user => new User(user))
 }
 ```
 
@@ -844,11 +1204,8 @@ getUsers(): Observable<User[]> {
 
 ## Improve Retry and timeout
 
-A more full complete retry
-
 ```js
-http.get('api/users')
-    .map(res => res.json())
+httpClient.get('api/users')
     .let(handleRetryAndTimeout(2, 500, 2000))
     .catch(error => castError(error))
 
@@ -866,8 +1223,38 @@ function handleRetryAndTimeout(retry, retryTime, timeout) {
             }, 0)
             .delay(retryTime);
         })
-        .catch(castError);
     }
+}
+```
+
+----
+
+## Http Cast Error
+
+```js
+return httpClient.get('api/users')
+    .catch(error => castError(error))
+```
+
+```js
+function castError(error) {
+    if (error instanceof Error) {
+        if (error.name === 'TimeoutError') {
+          return Observable.throw(error);
+        }
+        return Observable.throw(
+          new CommunicationError('Failed to process server response', error)
+        );
+    }
+    // HttpErrorResponse
+    if (error.status == 0) {
+        // A network error occurred (DNS, No Internet, ...)
+        return Observable.throw(new NoConnectionError());
+    }
+    // The backend returned an unsuccessful response code.
+    return Observable.throw(
+        new RequestError(error.status, error.statusText, error)
+    );
 }
 ```
 
@@ -1054,21 +1441,20 @@ module.exports = function(config) {
 
 ## Jest
 
-> Don't use Karma/Jasmine
-
-Jest is:
-
 * Easier to use
 * Fast (parallel, jsDom)
 * Gives Instant Feedback
 * Has Powerful mocking
 * Has snapshot testing (easy component testing)
+* Can do client & server
+
+> Use Jest in favor of Karma/Jasmine
 
 ----
 
-## Fast http testing
+## Easy http testing
 
-This is slow :(
+Easy http testing with HttpClientTestingModule
 
 ```js
 beforeEach(() => {
@@ -1079,7 +1465,7 @@ beforeEach(() => {
 })
 
 test('getModels', () => {
-    engine.getModels().subscribe(models => {
+    myService.getModels().subscribe(models => {
       expect(models.length).toBe(2);
       expect(models[0]).toEqual('aaaaa');
     });
@@ -1091,6 +1477,10 @@ test('getModels', () => {
 });
 
 ```
+
+----
+
+## Fast http testing
 
 Simple mocking is x10 faster then TestBed testing
 
@@ -1116,67 +1506,101 @@ test('getModels', async(() => {
 
 ---
 
-# Date Pipe
-
-```html
-<span>{{today | date: 'dd/MM/yyyy'}}</span>
-<span>{{today | date: 'shortDate'}}</span>
-```
-
-Predefined formats
-
-* ‘medium’
-* ‘short’
-* ‘longDate’
-* ‘mediumDate’
-* ‘mediumTime’
-* ‘shortTime’
-
-It's US format, but we can change this
-
-```
-providers: [
-    {
-        provide: LOCALE_ID,
-        useValue: 'en-US'
-    }
-]
-```
+# Performance
+> Get up to speed
 
 ----
 
-# Date Pipe
+## AOT (Ahead Of Time) compilation
 
-Better to create custom date pipe
+* Renders faster
+* Can detect errors compile-time
+* Is more secure
+* Type checking in templates
+* Is smaller (for small app's)
+
+You need Angular 4.x or higher and build for production
+
+```bash
+npx ng build --target=production
+npx ng build --prod
+npx ng build --dev --aot
+```
+
+> Build often in production, AOT errors are hard to track.
+
+https://medium.com/spektrakel-blog/angular-writing-aot-friendly-applications-7b64c8afbe3f
+
+----
+
+## AOT - Angular 5
+
+* AOT becomes the default
+* Much faster build with enabling incremental compilation
+* Reduction of bundle size
+
+----
+
+## OnPush change detection strategy
+
+Default change strategy: 'CheckAlways'
+
+OnPush
 
 ```js
-@Pipe({
-  name: 'dateFormat'
+Component({
+    selector: 'my-component',
+    template: '<img src="{{user.portrait}}"/> {{user.name}}',
+    changeDetection: ChangeDetectionStrategy.OnPush
+  })
+```
+
+* An input property has changed to a new value (immutable change)
+* An event handler fired in the component
+* The change detector of a child component runs
+* Manually tell the change detector to look for changes
+
+```ts
+constructor(private cd: ChangeDetectorRef) {}
+ngOnInit() {
+    this.addItemStream.subscribe(() => {
+      this.counter++; // application state changed
+      this.cd.markForCheck(); // marks path
+    })
+  }
+```
+
+https://blog.thoughtram.io/angular/2016/02/22/angular-2-change-detection-explained.html
+
+----
+
+## *ngFor - trackBy
+
+By using ```*ngFor``` with ```trackBy``` only the changed element are re-rendered
+
+```ts
+@Component({
+  selector: 'my-app',
+  template: `
+    <ul>
+      <li *ngFor="let item of items;trackBy: trackByFn">
+          {{item.id}}
+      </li>
+    </ul>
+  `,
 })
-export class DateFormatPipe extends DatePipe implements PipeTransform {
-  transform(value: any, args?: any): any {
-    return super.transform(value, 'dd/MMM/yyyy');
+export class App {
+  constructor() {
+    this.items = [{id: 1}, {id: 2}, {id: 3}];
+  }
+
+  trackByFn(index, item) {
+    return index;
   }
 }
 ```
 
-```html
-<span>{{today | dateFormat}}</span>
-```
-
-Alternative
-
-```js
-@Pipe({
-  name: 'dateFormat'
-})
-export class DateFormatPipe implements PipeTransform {
-  transform(value: any, args?: any): any {
-    const datePipe = new DatePipe('en');
-    return datePipe.transform(value, 'dd/MMM/yyyy');
-  }
-}
-```
+Usefull for large lists
 
 ---
 
