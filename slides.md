@@ -81,13 +81,13 @@ Rangle's Angular Training Book
 
 ## It’s Angular
 
-AngularJS is 1.x
-Angular is 2+ (so also 4, 5, 6)
-
-Angular 4.x has Long Term Support (LTS) until October 2018
-Angular 5 will be released in 23 oct 2017
-Angular 6 - March 2018
-Angular 7 - October 2018
+* AngularJS: v1.x
+* Angular: v2+ (so also 4, 5, 6)
+* Angular 4.x - Long Term Support (LTS) until October 2018
+* Angular 4.4.1 - current release
+* Angular 5 - 23 oct 2017
+* Angular 6 - March 2018
+* Angular 7 - October 2018
 
 [angular/RELEASE_SCHEDULE.md at master · angular/angular · GitHub](https://github.com/angular/angular/blob/master/docs/RELEASE_SCHEDULE.md)
 
@@ -242,11 +242,11 @@ $ rimraf ./node_modules
 ---
 
 # AngularCLI
-> Less known but powerfull options
+> More then you know
 
 ----
 
-## Mot Module Replacement
+## Hot Module Replacement
 
 ```bash
 # startup development server with HMR
@@ -311,46 +311,67 @@ ng serve --extract-css --hmr
 ---
 
 # Typescript
-> I can do more then you think
+> You love it or hate it.
 
 ----
 
 ## Global variables
 
+typings.d.ts
+
 ```js
-// Extra variables that live on Global that
-// will be replaced by webpack DefinePlugin
-declare var ENV: string;
-declare var HMR: boolean;
-
-// Any global declarations
+// Global declarations
 declare var $: any;
+declare var _: any;
 
-// support NodeJS modules without type definitions
-declare module 'my-awesome-lib';
+// Support NodeJS modules without type definitions
+// and running in strict
 declare module '*';
+declare module 'my-awesome-lib';
 
-interface ErrorStackTraceLimit {
+// Add global variable to window
+interface Window {
+  ENV: string;
+}
+
+// Add none standard function on Error
+interface ErrorConstructor {
   stackTraceLimit: number;
 }
 
-interface GlobalEnvironment {
-  ENV: string;
-  HMR: boolean;
+// custom typings
+declare module 'my-module' {
+ export function doesSomething(value: string): string;
 }
+```
 
-interface Global extends GlobalEnvironment  {}
+app.component.ts
+
+```
+Error.stackTraceLimit = 0
+windows.ENV = 'dev'
+$('.myClass')
 ```
 
 ----
 
 ## Absolute imports
 
-TypeScript supports absolute imports. The preset by default understands all absolute imports referring to src directory, so instead:
+TypeScript supports absolute imports.
 
 ```
-import MyComponent from '../../src/app/my.component';
-import MyStuff from '../../src/testing/my.stuff';
+// tsconfig.json
+{
+    ...
+    "baseUrl": "src",
+}
+```
+
+The preset by default understands all absolute imports referring to src directory, so instead:
+
+```
+import MyComponent from '../../my.component';
+import MyStuff from '../../testing/my.stuff';
 ```
 
 you can use:
@@ -452,9 +473,10 @@ getAll() : Observable<User[]> {
 
 ## HttpClient
 
+- A better @angular/http
 - No more res.json()
-- Http interceptors are back
-- Easier unit testing !!!!!
+- Http interceptors are back (from AngularJS)
+- Easy unit testing !!!!!
 
 ```js
 import { HttpClient } from '@angular/common/http';
@@ -529,11 +551,13 @@ export class HeroComponent {
 export class HighlightDirective {
   constructor(private el: ElementRef, private renderer: Renderer2) { }
 
+  // listen to click event on component
   @HostListener('click', ['$event'])
   onClick() {
     ...
   }
 
+  // listen to click event on document
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     if (this.el.nativeElement.contains(event.target)) {
@@ -580,13 +604,14 @@ export class AppModule { }
 
 ## Avoid magic strings
 
-Don't
+Avoid
 
 ```html
-<message [type]="error">Hello</message>
+<message type="error">Hello</message>
+<message [type]="'error'">Hello</message>
 ```
 
-Do use enum (and we have auto complete in the template)
+Consider to use enum (and we have auto complete in the template)
 
 ```js
 export enum MessageTypes {
@@ -640,7 +665,7 @@ hasFieldError(fieldName: string): boolean {
 
 ----
 
-## Details should go in sub components
+## Details in sub components
 
 Whenever you write an **ngFor**, consider separating that element into a dependent component:
 
@@ -671,14 +696,14 @@ Don't
 <span>{{today | date: 'shortDate'}}</span>
 ```
 
-Predefined formats
+[Predefined formats](https://v2.angular.io/docs/ts/latest/api/common/index/DatePipe-pipe.html)
 
 * ‘medium’
 * ‘short’
 * ‘longDate’
 * ‘shortTime’
 
-It's US format, but we can change this
+Default US format, but we can change this
 
 ```
 providers: [
@@ -691,15 +716,15 @@ providers: [
 
 ----
 
-## Date Pipe
+## Custom Date Pipe
 
 Do
 
 ```js
 @Pipe({
-  name: 'dateFormat'
+  name: 'dateShort'
 })
-export class DateFormatPipe extends DatePipe implements PipeTransform {
+export class DateShortPipe extends DatePipe implements PipeTransform {
   transform(value: any, args?: any): any {
     return super.transform(value, 'dd/MMM/yyyy');
   }
@@ -707,16 +732,16 @@ export class DateFormatPipe extends DatePipe implements PipeTransform {
 ```
 
 ```html
-<span>{{today | dateFormat}}</span>
+<span>{{today | dateShort}}</span>
 ```
 
 Alternative
 
 ```js
 @Pipe({
-  name: 'dateFormat'
+  name: 'dateShort'
 })
-export class DateFormatPipe implements PipeTransform {
+export class DateShortPipe implements PipeTransform {
   transform(value: any, args?: any): any {
     const datePipe = new DatePipe('en');
     return datePipe.transform(value, 'dd/MMM/yyyy');
@@ -763,17 +788,21 @@ odd & even
 
 ----
 
-## Constructor vs onInit()
+## Constructor vs properties vs onInit()
 
 * Constructor is for dependency injection
 * OnInit for the rest
 
 ```ts
 class ExampleComponent implements OnInit {
+  // properties are initialized after the constructor
   users$ = this.store.select('users');
+
+  // Input is only available after onInit
   @Input() person: Person;
 
   // this is called by the JavaScript engine
+  // only for dependency injection
   constructor(
     private activatedRoute: ActivatedRoute,
     private store: Store<IAppState>
@@ -791,7 +820,7 @@ class ExampleComponent implements OnInit {
 ---
 
 # Forms
-> Template of reactive forms, which to choose.
+> Template of reactive forms.
 
 ----
 
@@ -1601,7 +1630,7 @@ ngOnInit() {
   }
 ```
 
----
+----
 
 ## OnPush
 
