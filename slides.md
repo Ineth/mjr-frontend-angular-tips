@@ -3,7 +3,7 @@ title: Angular Tips & Tricks
 revealOptions:
     transition: 'fade'
     transition-speed: 'slow'
-    width: 1024
+    width: 1200
     height: 900
     margin: 0.1
     minScale: 0.5
@@ -658,40 +658,6 @@ Consider
 
 ```html
 <user-details *ngFor="let user of users" [user]="user"></user-details>
-```
-
-----
-
-## Style host element of the component?
-
-Don't
-
-```html
-<!-- sample.component.html -->
-<div class="sample">
-    <h1>My Component</h1>
-</div>
-```
-
-```css
-/* sample.component.css */
-.sample {
-  background: blue;
-}
-```
-
-Do
-
-```html
-<!-- sample.component.html -->
-<h1>My Component</h1>
-```
-
-```css
-/* sample.component.css */
-.root {
-  background: blue;
-}
 ```
 
 ----
@@ -1511,7 +1477,13 @@ test('getModels', async(() => {
 
 ----
 
+# Performance
+
 ## AOT (Ahead Of Time) compilation
+
+----
+
+## AOT compilation
 
 * Renders faster
 * Can detect errors compile-time
@@ -1527,13 +1499,15 @@ npx ng build --prod
 npx ng build --dev --aot
 ```
 
-> Build often in production, AOT errors are hard to track.
-
+<small>
 https://medium.com/spektrakel-blog/angular-writing-aot-friendly-applications-7b64c8afbe3f
+</small>
 
 ----
 
-## AOT - Angular 5
+## AOT
+
+#### Angular 5
 
 * AOT becomes the default
 * Much faster build with enabling incremental compilation
@@ -1541,36 +1515,9 @@ https://medium.com/spektrakel-blog/angular-writing-aot-friendly-applications-7b6
 
 ----
 
-## OnPush change detection strategy
+# Performance
 
-Default change strategy: 'CheckAlways'
-
-OnPush
-
-```js
-Component({
-    selector: 'my-component',
-    template: '<img src="{{user.portrait}}"/> {{user.name}}',
-    changeDetection: ChangeDetectionStrategy.OnPush
-  })
-```
-
-* An input property has changed to a new value (immutable change)
-* An event handler fired in the component
-* The change detector of a child component runs
-* Manually tell the change detector to look for changes
-
-```ts
-constructor(private cd: ChangeDetectorRef) {}
-ngOnInit() {
-    this.addItemStream.subscribe(() => {
-      this.counter++; // application state changed
-      this.cd.markForCheck(); // marks path
-    })
-  }
-```
-
-https://blog.thoughtram.io/angular/2016/02/22/angular-2-change-detection-explained.html
+## *ngFor - trackBy
 
 ----
 
@@ -1601,6 +1548,67 @@ export class App {
 ```
 
 Usefull for large lists
+
+----
+
+# Performance
+
+## Change detection strategy
+
+----
+
+## Default
+
+```ts
+Component({
+    selector: 'my-component',
+    template: '<img src="{{user.portrait}}"/> {{user.name}}',
+    changeDetection: ChangeDetectionStrategy.Default
+})
+```
+
+### Default === 'CheckAlways'
+
+<section>
+<img src="./images/changeDetection-1.svg" width="500px">
+<img src="./images/changeDetection-2.svg" width="500px">
+</section>
+
+----
+
+## OnPush
+
+```js
+Component({
+    selector: 'my-component',
+    template: '<img src="{{user.portrait}}"/> {{user.name}}',
+    changeDetection: ChangeDetectionStrategy.OnPush
+  })
+```
+
+* An input property has changed to a new value (immutable change)
+* An event handler fired in the component
+* The change detector of a child component runs
+* Manually tell the change detector to look for changes
+
+```ts
+constructor(private cd: ChangeDetectorRef) {}
+ngOnInit() {
+    this.addItemStream.subscribe(() => {
+      this.counter++; // application state changed
+      this.cd.markForCheck(); // marks path
+    })
+  }
+```
+
+---
+
+## OnPush
+
+<img src="./images/changeDetection-3.svg" width="500px">
+
+https://blog.thoughtram.io/angular/2016/02/22/angular-2-change-detection-explained.html
+
 
 ---
 

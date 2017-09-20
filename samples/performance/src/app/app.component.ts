@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-root',
@@ -9,7 +9,10 @@ import { Component, OnInit } from '@angular/core';
       {{item.name}} - {{i}}
       </li>
     </ul>
-    <button (click)="getItems()">Refresh items</button>
+    <button (click)="refreshItems()">Refresh items</button>
+    <button (click)="onAddUser()">Add item</button>
+    <hr>
+    <!-- <sample [users]="collection"></sample><br> -->
   `,
 })
 export class AppComponent {
@@ -23,7 +26,7 @@ export class AppComponent {
     ];
   }
 
-  getItems() {
+  refreshItems() {
     this.collection = this.getItemsFromServer();
   }
 
@@ -38,5 +41,12 @@ export class AppComponent {
 
   trackByFn(index, item) {
     return index;
+  }
+
+  onAddUser() {
+    this.collection.push({
+      id: 10,
+      name: 'Joske',
+    });
   }
 }
